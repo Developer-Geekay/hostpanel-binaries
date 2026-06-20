@@ -13,9 +13,9 @@ on:
         description: 'Version to fetch (e.g. 8.0.4)'
         required: true
       archs:
-        description: 'Architectures (comma-separated: aarch64,x86_64)'
+        description: 'Architectures (comma-separated: aarch64,x86_64). Primary arch is aarch64.'
         required: true
-        default: 'aarch64,x86_64'
+        default: 'aarch64'
 
 jobs:
   fetch:

@@ -13,10 +13,8 @@ Pre-vetted binaries used by HostPanel packages. Packages pull binaries from here
 
 | Release tag | Asset | Architecture |
 |---|---|---|
-| `mongodb-8.0.4` | `mongod-aarch64` | ARM64 (Raspberry Pi) |
-| `mongodb-8.0.4` | `mongod-x86_64` | x86-64 |
-| `nodejs-20.18.0` | `node-aarch64` | ARM64 |
-| `nodejs-20.18.0` | `node-x86_64` | x86-64 |
+| `mongodb-8.0.4` | `mongod-aarch64` | ARM64 (primary — Raspberry Pi, Apple Silicon VMs) |
+| `nodejs-20.18.0` | `node-aarch64` | ARM64 (primary) |
 
 ## Adding a new binary
 
