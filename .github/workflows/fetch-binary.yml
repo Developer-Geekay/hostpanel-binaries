@@ -4,16 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Package (mongodb, nodejs, php, ...)'
+        description: 'Package to fetch'
         required: true
         type: choice
         options:
           - mongodb
+          - mongodb-tools
       version:
-        description: 'Version to fetch (e.g. 8.0.4)'
+        description: 'Version (e.g. 8.0.4 for mongodb, 100.10.0 for mongodb-tools)'
         required: true
       archs:
-        description: 'Architectures (comma-separated: aarch64,x86_64). Primary arch is aarch64.'
+        description: 'Architectures (comma-separated). Primary is aarch64.'
         required: true
         default: 'aarch64'
 
@@ -32,7 +33,6 @@ jobs:
           VERSION: ${{ inputs.version }}
           ARCHS: ${{ inputs.archs }}
         run: |
-          # Allow only safe characters to prevent injection
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
             echo "ERROR: version must match X.Y or X.Y.Z (got: $VERSION)"
             exit 1
@@ -43,49 +43,64 @@ jobs:
           fi
           echo "Inputs OK: package=$PACKAGE version=$VERSION archs=$ARCHS"
 
-      - name: Fetch MongoDB binaries
+      - name: Fetch MongoDB server binary (mongod)
         if: inputs.package == 'mongodb'
         env:
           VERSION: ${{ inputs.version }}
           ARCHS: ${{ inputs.archs }}
         run: |
           mkdir -p out
-          # MongoDB bundles against Ubuntu 24.04 (noble) — compatible with 24.04+
           DISTRO="ubuntu2404"
           IFS=',' read -ra ARCH_LIST <<< "$ARCHS"
           for ARCH in "${ARCH_LIST[@]}"; do
-            ARCH="${ARCH// /}"  # trim whitespace
+            ARCH="${ARCH// /}"
             echo "Fetching mongod $VERSION for $ARCH ($DISTRO)..."
-
-            TARBALL="mongodb-linux-${ARCH}-${DISTRO}-${VERSION}.tgz"
-            URL="https://fastdl.mongodb.org/linux/${TARBALL}"
+            URL="https://fastdl.mongodb.org/linux/mongodb-linux-${ARCH}-${DISTRO}-${VERSION}.tgz"
             curl -fsSL "$URL" -o mongo.tgz
-
             tar -xzf mongo.tgz --strip-components=2 \
               "mongodb-linux-${ARCH}-${DISTRO}-${VERSION}/bin/mongod"
-
             mv mongod "out/mongod-${ARCH}"
             chmod +x "out/mongod-${ARCH}"
             rm mongo.tgz
-
             echo "✓ mongod-${ARCH}: $(du -sh "out/mongod-${ARCH}" | cut -f1)"
           done
 
-      - name: Create GitHub Release
+      - name: Fetch MongoDB Database Tools (mongodump, mongorestore)
+        if: inputs.package == 'mongodb-tools'
         env:
-          PACKAGE: ${{ inputs.package }}
           VERSION: ${{ inputs.version }}
+          ARCHS: ${{ inputs.archs }}
+        run: |
+          mkdir -p out
+          DISTRO="ubuntu2404"
+          # MongoDB tools use 'arm64' in filename, server uses 'aarch64'
+          declare -A TOOLS_ARCH_MAP=( ["aarch64"]="arm64" ["x86_64"]="x86_64" )
+          TOOLS=("mongodump" "mongorestore" "mongoexport" "mongoimport")
+          IFS=',' read -ra ARCH_LIST <<< "$ARCHS"
+          for ARCH in "${ARCH_LIST[@]}"; do
+            ARCH="${ARCH// /}"
+            TOOLS_ARCH="${TOOLS_ARCH_MAP[$ARCH]:-$ARCH}"
+            echo "Fetching mongodb-database-tools $VERSION for $ARCH (tools arch: $TOOLS_ARCH)..."
+            TARBALL="mongodb-database-tools-${DISTRO}-${TOOLS_ARCH}-${VERSION}.tgz"
+            URL="https://fastdl.mongodb.org/tools/db/${TARBALL}"
+            curl -fsSL "$URL" -o tools.tgz
+            STRIP_DIR="mongodb-database-tools-${DISTRO}-${TOOLS_ARCH}-${VERSION}"
+            for TOOL in "${TOOLS[@]}"; do
+              tar -xzf tools.tgz --strip-components=2 "${STRIP_DIR}/bin/${TOOL}"
+              mv "${TOOL}" "out/${TOOL}-${ARCH}"
+              chmod +x "out/${TOOL}-${ARCH}"
+              echo "✓ ${TOOL}-${ARCH}: $(du -sh "out/${TOOL}-${ARCH}" | cut -f1)"
+            done
+            rm tools.tgz
+          done
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ inputs.package }}-${{ inputs.version }}"
           name: "${{ inputs.package }} ${{ inputs.version }}"
           body: |
             Pre-vetted `${{ inputs.package }}` ${{ inputs.version }} binaries for HostPanel packages.
-
-            | Asset | Architecture |
-            |---|---|
-            | `mongod-aarch64` | ARM64 (Raspberry Pi, Apple Silicon VMs) |
-            | `mongod-x86_64` | x86-64 (standard servers) |
 
             Used by: `hostpanel-package-mongodb`
           files: out/*
