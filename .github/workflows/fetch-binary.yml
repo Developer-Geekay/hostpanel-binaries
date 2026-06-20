@@ -50,16 +50,19 @@ jobs:
           ARCHS: ${{ inputs.archs }}
         run: |
           mkdir -p out
+          # MongoDB bundles against Ubuntu 24.04 (noble) — compatible with 24.04+
+          DISTRO="ubuntu2404"
           IFS=',' read -ra ARCH_LIST <<< "$ARCHS"
           for ARCH in "${ARCH_LIST[@]}"; do
-            ARCH="${ARCH// /}"  # trim whitespace without subshell
-            echo "Fetching mongod $VERSION for $ARCH..."
+            ARCH="${ARCH// /}"  # trim whitespace
+            echo "Fetching mongod $VERSION for $ARCH ($DISTRO)..."
 
-            URL="https://fastdl.mongodb.org/linux/mongodb-linux-${ARCH}-${VERSION}.tgz"
+            TARBALL="mongodb-linux-${ARCH}-${DISTRO}-${VERSION}.tgz"
+            URL="https://fastdl.mongodb.org/linux/${TARBALL}"
             curl -fsSL "$URL" -o mongo.tgz
 
             tar -xzf mongo.tgz --strip-components=2 \
-              "mongodb-linux-${ARCH}-${VERSION}/bin/mongod"
+              "mongodb-linux-${ARCH}-${DISTRO}-${VERSION}/bin/mongod"
 
             mv mongod "out/mongod-${ARCH}"
             chmod +x "out/mongod-${ARCH}"
