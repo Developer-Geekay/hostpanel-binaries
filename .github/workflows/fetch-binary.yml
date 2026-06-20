@@ -1,0 +1,89 @@
+name: Fetch and Release Binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package (mongodb, nodejs, php, ...)'
+        required: true
+        type: choice
+        options:
+          - mongodb
+      version:
+        description: 'Version to fetch (e.g. 8.0.4)'
+        required: true
+      archs:
+        description: 'Architectures (comma-separated: aarch64,x86_64)'
+        required: true
+        default: 'aarch64,x86_64'
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        env:
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          ARCHS: ${{ inputs.archs }}
+        run: |
+          # Allow only safe characters to prevent injection
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "ERROR: version must match X.Y or X.Y.Z (got: $VERSION)"
+            exit 1
+          fi
+          if ! echo "$ARCHS" | grep -qE '^[a-z0-9_]+(,[a-z0-9_]+)*$'; then
+            echo "ERROR: archs must be comma-separated identifiers (got: $ARCHS)"
+            exit 1
+          fi
+          echo "Inputs OK: package=$PACKAGE version=$VERSION archs=$ARCHS"
+
+      - name: Fetch MongoDB binaries
+        if: inputs.package == 'mongodb'
+        env:
+          VERSION: ${{ inputs.version }}
+          ARCHS: ${{ inputs.archs }}
+        run: |
+          mkdir -p out
+          IFS=',' read -ra ARCH_LIST <<< "$ARCHS"
+          for ARCH in "${ARCH_LIST[@]}"; do
+            ARCH="${ARCH// /}"  # trim whitespace without subshell
+            echo "Fetching mongod $VERSION for $ARCH..."
+
+            URL="https://fastdl.mongodb.org/linux/mongodb-linux-${ARCH}-${VERSION}.tgz"
+            curl -fsSL "$URL" -o mongo.tgz
+
+            tar -xzf mongo.tgz --strip-components=2 \
+              "mongodb-linux-${ARCH}-${VERSION}/bin/mongod"
+
+            mv mongod "out/mongod-${ARCH}"
+            chmod +x "out/mongod-${ARCH}"
+            rm mongo.tgz
+
+            echo "✓ mongod-${ARCH}: $(du -sh "out/mongod-${ARCH}" | cut -f1)"
+          done
+
+      - name: Create GitHub Release
+        env:
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ inputs.package }}-${{ inputs.version }}"
+          name: "${{ inputs.package }} ${{ inputs.version }}"
+          body: |
+            Pre-vetted `${{ inputs.package }}` ${{ inputs.version }} binaries for HostPanel packages.
+
+            | Asset | Architecture |
+            |---|---|
+            | `mongod-aarch64` | ARM64 (Raspberry Pi, Apple Silicon VMs) |
+            | `mongod-x86_64` | x86-64 (standard servers) |
+
+            Used by: `hostpanel-package-mongodb`
+          files: out/*
+          make_latest: false
