@@ -10,8 +10,8 @@ Pre-vetted, standalone binary distributions and release assets used by HostPanel
 hostpanel-binaries/
 ├── database/
 │   ├── mongodb/
-│   │   ├── aarch64/          # mongodb-linux-aarch64-8.0.4.tgz (89MB), mongosh-2.3.8-arm64.tgz (77MB)
-│   │   └── x86_64/           # mongodb-linux-x86_64-8.0.4.tgz (94MB), mongosh-2.3.8-x64.tgz (78MB), db tools
+│   │   ├── aarch64/          # mongodb-linux-aarch64-8.0.4.tgz (89MB), mongosh-2.3.8-arm64.tgz (77MB), db tools (48MB)
+│   │   └── x86_64/           # mongodb-linux-x86_64-8.0.4.tgz (94MB), mongosh-2.3.8-x64.tgz (78MB), db tools (52MB)
 │   └── mysql/
 │       ├── aarch64/          # mariadbd, mariadb client tools (ARM64)
 │       └── x86_64/           # mariadbd, mariadb client tools (x86_64)
