@@ -1,7 +1,6 @@
 .DS_Store
 out/
-*.tgz
-*.tar.gz
+
 
 # ── Secrets & local state — never commit ─────────────────────────────────────
 .env
