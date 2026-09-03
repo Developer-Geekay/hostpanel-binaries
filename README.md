@@ -17,11 +17,11 @@ hostpanel-binaries/
 │       └── x86_64/           # mariadbd, mariadb client tools (x86_64)
 ├── webserver/
 │   ├── Apache/
-│   │   ├── aarch64/          # httpd runtime
-│   │   └── x86_64/           # httpd runtime
+│   │   ├── aarch64/          # httpd, apache2, modules/*.so (118 modules)
+│   │   └── x86_64/           # httpd, apache2, modules/*.so (118 modules)
 │   ├── Nginx/
-│   │   ├── aarch64/          # nginx (1.26+)
-│   │   └── x86_64/           # nginx (1.26+)
+│   │   ├── aarch64/          # nginx (4.6 MB)
+│   │   └── x86_64/           # nginx (1.3 MB)
 │   └── LightSpeed/
 │       ├── aarch64/
 │       └── x86_64/
